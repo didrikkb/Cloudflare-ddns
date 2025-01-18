@@ -98,9 +98,20 @@ func (req *Request) FindExistingRecordIds() {
 		for idx, newRec := range req.Records {
 			if newRec.Name == excRec.Name && newRec.Tp == excRec.Type {
 				req.Records[idx].ID = excRec.ID
+				req.Records[idx].Exists = compareRecords(newRec, excRec)
 			}
 		}
 	}
+}
+
+func compareRecords(rec1 Record, rec2 ResultItem) bool {
+	if (rec1.Comment == "") != (rec2.Comment == nil) {
+		return false
+	}
+	if rec2.Comment != nil {
+		return rec1.Comment == *(rec2.Comment) && rec1.Content == rec2.Content && rec1.Proxied == rec2.Proxied && rec1.TTL == rec2.TTL
+	}
+	return rec1.Content == rec2.Content && rec1.Proxied == rec2.Proxied && rec1.TTL == rec2.TTL
 }
 
 func (req *Request) UpdateDnsRecords() {
@@ -109,6 +120,10 @@ func (req *Request) UpdateDnsRecords() {
 	buff := make([]byte, 4096)
 
 	for _, rec := range req.Records {
+		if rec.Exists {
+			fmt.Println("Identical record already exist")
+			continue
+		}
 		recordRequest := req.createRequest(rec, rec.ID != "")
 		r, err := client.Do(recordRequest)
 		if err != nil {

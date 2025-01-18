@@ -16,11 +16,12 @@ type Record struct {
 	Content string
 	ID      string
 	TTL     int
+	Exists  bool
 	Proxied bool
 }
 
 func InitRecord(tokenizer *Tokenizer.Tokenizer) Record {
-	rec := Record{Comment: "", TTL: 3600, Proxied: false, ID: ""}
+	rec := Record{Comment: "", TTL: 3600, Proxied: false, ID: "", Exists: false}
 	done := false
 
 	for done == false {
