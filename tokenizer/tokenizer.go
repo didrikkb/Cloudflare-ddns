@@ -86,7 +86,7 @@ func (t *Tokenizer) NextToken() Token {
 	case "end":
 		tokenType = End
 	default:
-		fmt.Printf("Failed to parse token: %s in config\n", val)
+		fmt.Printf("Failed to parse token \"%s\" in config\n", tp)
 		os.Exit(1)
 	}
 

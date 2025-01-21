@@ -21,7 +21,7 @@ type Record struct {
 }
 
 func InitRecord(tokenizer *Tokenizer.Tokenizer) Record {
-	rec := Record{Comment: "", TTL: 3600, Proxied: false, ID: "", Exists: false}
+	rec := Record{Comment: "", TTL: 300, Proxied: false, ID: "", Exists: false, Tp: ""}
 	done := false
 
 	for done == false {
@@ -51,7 +51,7 @@ func InitRecord(tokenizer *Tokenizer.Tokenizer) Record {
 		case Tokenizer.End:
 			done = true
 		default:
-			fmt.Printf("Failed to parse token: %d in record\n", tokenizer.GetTokenNum())
+			fmt.Printf("Token \"%s\" was unexpected at position %d in record\n", Tokenizer.TokenTypeToString(t.Tp), tokenizer.GetTokenNum())
 			os.Exit(1)
 		}
 	}
@@ -70,7 +70,7 @@ func (rec *Record) Print() {
 }
 
 func (rec *Record) isValid() bool {
-	return len(rec.Name) > 0
+	return len(rec.Name) > 0 && len(rec.Tp) > 0
 }
 
 type IPv int

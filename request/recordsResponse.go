@@ -22,7 +22,7 @@ type ResultItem struct {
 	TTL        int      `json:"ttl"`
 	Settings   Settings `json:"settings"`
 	Meta       Meta     `json:"meta"`
-	Comment    *string  `json:"comment"` // Nullable, so use pointer
+	Comment    *string  `json:"comment"`
 	Tags       []string `json:"tags"`
 	CreatedOn  string   `json:"created_on"`
 	ModifiedOn string   `json:"modified_on"`

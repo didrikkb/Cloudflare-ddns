@@ -8,6 +8,5 @@ import (
 func main() {
 	tokenizer := Tokenizer.Init("./config.conf")
 	req := Request.InitRequest(tokenizer)
-	req.FindExistingRecordIds()
 	req.UpdateDnsRecords()
 }

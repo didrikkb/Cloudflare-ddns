@@ -35,7 +35,7 @@ func InitRequest(tokenizer *Tokenizer.Tokenizer) Request {
 		case Tokenizer.Done:
 			done = true
 		default:
-			fmt.Printf("Failed to parse token: %d in request\n", tokenizer.GetTokenNum())
+			fmt.Printf("Token \"%s\" was unexpected at position %d in record\n", Tokenizer.TokenTypeToString(t.Tp), tokenizer.GetTokenNum())
 			os.Exit(1)
 		}
 	}
@@ -44,6 +44,8 @@ func InitRequest(tokenizer *Tokenizer.Tokenizer) Request {
 		fmt.Println("Missing element in request")
 		os.Exit(1)
 	}
+
+	req.findExistingRecordIds()
 
 	return req
 }
@@ -60,7 +62,7 @@ func (req *Request) Print() {
 	}
 }
 
-func (req *Request) getRecords() []ResultItem {
+func (req *Request) getExistingRecords() []ResultItem {
 	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records", req.Zone)
 
 	r, _ := http.NewRequest("GET", url, nil)
@@ -68,37 +70,29 @@ func (req *Request) getRecords() []ResultItem {
 	r.Header.Set("X-Auth-Key", req.Key)
 
 	client := http.Client{}
+
 	res, err := client.Do(r)
 	if err != nil {
 		panic(err)
 	}
 
-	records := ""
-	buff := make([]byte, 1024)
-
-	for {
-		i, err := res.Body.Read(buff)
-		if err != nil || i == 0 {
-			break
-		}
-
-		records += string(buff[:i])
-	}
+	buff := ReadToBuffer(res.Body)
 
 	var response RecordsResponse
-	json.Unmarshal([]byte(records), &response)
+	json.Unmarshal(buff, &response)
 
 	return response.Result
 }
 
-func (req *Request) FindExistingRecordIds() {
-	recordRes := req.getRecords()
+func (req *Request) findExistingRecordIds() {
+	recordRes := req.getExistingRecords()
 
-	for _, excRec := range recordRes {
-		for idx, newRec := range req.Records {
+	for idx, newRec := range req.Records {
+		for _, excRec := range recordRes {
 			if newRec.Name == excRec.Name && newRec.Tp == excRec.Type {
 				req.Records[idx].ID = excRec.ID
 				req.Records[idx].Exists = compareRecords(newRec, excRec)
+				break
 			}
 		}
 	}
@@ -108,40 +102,49 @@ func compareRecords(rec1 Record, rec2 ResultItem) bool {
 	if (rec1.Comment == "") != (rec2.Comment == nil) {
 		return false
 	}
-	if rec2.Comment != nil {
-		return rec1.Comment == *(rec2.Comment) && rec1.Content == rec2.Content && rec1.Proxied == rec2.Proxied && rec1.TTL == rec2.TTL
+	if rec2.Comment != nil && rec1.Comment != *(rec2.Comment) {
+		return false
 	}
-	return rec1.Content == rec2.Content && rec1.Proxied == rec2.Proxied && rec1.TTL == rec2.TTL
+	if rec1.Content != rec2.Content {
+		return false
+	}
+	if rec1.Proxied != rec2.Proxied {
+		return false
+	}
+	if !rec1.Proxied && rec1.TTL != rec2.TTL {
+		return false
+	}
+	return true
 }
 
 func (req *Request) UpdateDnsRecords() {
 
 	client := http.Client{}
-	buff := make([]byte, 4096)
 
 	for _, rec := range req.Records {
 		if rec.Exists {
 			fmt.Println("Identical record already exist")
 			continue
 		}
-		recordRequest := req.createRequest(rec, rec.ID != "")
+
+		recordRequest := req.buildRequest(rec)
 		r, err := client.Do(recordRequest)
+
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
 
-		i, err := r.Body.Read(buff)
-
-		fmt.Println((string(buff[:i])))
+		buff := ReadToBuffer(r.Body)
+		fmt.Println((string(buff)))
 	}
 }
 
-func (req *Request) createRequest(rec Record, update bool) *http.Request {
+func (req *Request) buildRequest(rec Record) *http.Request {
 	var url string
 	var method string
 
-	if update {
+	if rec.ID != "" {
 		url = fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/dns_records/%s", req.Zone, rec.ID)
 		method = "PATCH"
 	} else {
@@ -173,4 +176,20 @@ func (req *Request) createRequest(rec Record, update bool) *http.Request {
 	r.Header.Set("X-Auth-Key", req.Key)
 
 	return r
+}
+
+func ReadToBuffer(r interface{ Read([]byte) (int, error) }) []byte {
+	b := make([]byte, 1024)
+	res := make([]byte, 0)
+
+	for {
+		i, err := r.Read(b)
+		if i == 0 || err != nil {
+			break
+		}
+
+		res = append(res, b[:i]...)
+	}
+
+	return res
 }
