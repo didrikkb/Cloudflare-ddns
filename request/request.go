@@ -123,7 +123,6 @@ func (req *Request) UpdateDnsRecords() {
 
 	for _, rec := range req.Records {
 		if rec.Exists {
-			fmt.Println("Identical record already exist")
 			continue
 		}
 

@@ -105,19 +105,14 @@ func getIP(v IPv) string {
 		panic(err)
 	}
 
-	buff := make([]byte, 64)
-
-	n, err := resp.Body.Read(buff)
-	if err != nil {
-		panic(err)
-	}
+	buff := ReadToBuffer(resp.Body)
 
 	switch v {
 	case IPv4:
-		ipv4 = string(buff[:n])
+		ipv4 = string(buff)
 		res = ipv4
 	case IPv6:
-		ipv6 = string(buff[:n])
+		ipv6 = string(buff)
 		res = ipv6
 	}
 
