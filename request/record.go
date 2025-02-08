@@ -104,6 +104,7 @@ func getIP(v IPv) string {
 	if err != nil {
 		panic(err)
 	}
+	defer resp.Body.Close()
 
 	buff := ReadToBuffer(resp.Body)
 

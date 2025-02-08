@@ -75,6 +75,7 @@ func (req *Request) getExistingRecords() []ResultItem {
 	if err != nil {
 		panic(err)
 	}
+	defer res.Body.Close()
 
 	buff := ReadToBuffer(res.Body)
 
@@ -128,11 +129,11 @@ func (req *Request) UpdateDnsRecords() {
 
 		recordRequest := req.buildRequest(rec)
 		r, err := client.Do(recordRequest)
-
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
+		defer r.Body.Close()
 
 		buff := ReadToBuffer(r.Body)
 		fmt.Println((string(buff)))
